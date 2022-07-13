@@ -46,6 +46,7 @@ class UGATIT(object) :
 
         """ Generator """
         self.n_res = args.n_res
+        self.use_id = args.use_id
         self.path_regularize = args.path_regularize
         self.g_reg_every = args.g_reg_every
         self.path_batch_shrink = args.path_batch_shrink
@@ -118,8 +119,8 @@ class UGATIT(object) :
         self.testB_loader = DataLoader(self.testB, batch_size=1, shuffle=False)
 
         """ Define Generator, Discriminator """
-        self.genA2B = ResnetGenerator(input_nc=3, output_nc=3, ngf=self.ch, n_blocks=self.n_res, img_size=self.img_size, light=self.light).to(self.device)
-        self.genB2A = ResnetGenerator(input_nc=3, output_nc=3, ngf=self.ch, n_blocks=self.n_res, img_size=self.img_size, light=self.light).to(self.device)
+        self.genA2B = ResnetGenerator(input_nc=3, output_nc=3, ngf=self.ch, n_blocks=self.n_res, img_size=self.img_size, light=self.light, self.use_id).to(self.device)
+        self.genB2A = ResnetGenerator(input_nc=3, output_nc=3, ngf=self.ch, n_blocks=self.n_res, img_size=self.img_size, light=self.light, self.use_id).to(self.device)
         self.disGA = Discriminator(input_nc=3, ndf=self.ch, n_layers=7).to(self.device)
         self.disGB = Discriminator(input_nc=3, ndf=self.ch, n_layers=7).to(self.device)
         self.disLA = Discriminator(input_nc=3, ndf=self.ch, n_layers=5).to(self.device)
@@ -127,7 +128,8 @@ class UGATIT(object) :
 
 
         """ face recognition"""
-        self.arcface = ArcFace().to(self.device)
+        if self.use_id:
+            self.arcface = ArcFace().to(self.device)
 
         """ Define Loss """
         self.L1_loss = nn.L1Loss().to(self.device)
@@ -199,8 +201,12 @@ class UGATIT(object) :
             # Update D
             self.D_optim.zero_grad()
 
-            real_A_id = self.arcface.forward(real_A)
-            real_B_id = self.arcface.forward(real_B)
+            if self.use_id:
+                real_A_id = self.arcface.forward(real_A)
+                real_B_id = self.arcface.forward(real_B)
+            else:
+                real_A_id = None
+                real_B_id = None
             fake_A2B, _, _ = self.genA2B(real_A, real_A_id)
             fake_B2A, _, _ = self.genB2A(real_B, real_B_id)
 
@@ -233,8 +239,12 @@ class UGATIT(object) :
             # Update G
             self.G_optim.zero_grad()
 
-            real_A_id = self.arcface.forward(real_A)
-            real_B_id = self.arcface.forward(real_B)
+            if self.use_id:
+                real_A_id = self.arcface.forward(real_A)
+                real_B_id = self.arcface.forward(real_B)
+            else:
+                real_A_id = None
+                real_B_id = None
             fake_A2B, fake_A2B_cam_logit, _ = self.genA2B(real_A, real_A_id)
             fake_B2A, fake_B2A_cam_logit, _ = self.genB2A(real_B, real_B_id)
 
@@ -259,13 +269,23 @@ class UGATIT(object) :
                 if self.path_batch_shrink:
                     weighted_path_loss_B += 0 * fake_B2A[0, 0, 0, 0]
 
-            fake_A2B_id = self.arcface.forward(fake_A2B)
-            fake_B2A_id = self.arcface.forward(fake_B2A)
+
+
+            if self.use_id:
+                fake_A2B_id = self.arcface.forward(fake_A2B)
+                fake_B2A_id = self.arcface.forward(fake_B2A)
+            else:
+                fake_A2B_id = None
+                fake_B2A_id = None
             fake_A2B2A, _, _ = self.genB2A(fake_A2B, fake_A2B_id)
             fake_B2A2B, _, _ = self.genA2B(fake_B2A, fake_B2A_id)
 
-            real_A_id = self.arcface.forward(real_A)
-            real_B_id = self.arcface.forward(real_B)
+            if self.use_id:
+                real_A_id = self.arcface.forward(real_A)
+                real_B_id = self.arcface.forward(real_B)
+            else:
+                real_A_id = None
+                real_B_id = None
             fake_A2A, fake_A2A_cam_logit, _ = self.genB2A(real_A, real_A_id)
             fake_B2B, fake_B2B_cam_logit, _ = self.genA2B(real_B, real_B_id)
 
@@ -341,13 +361,21 @@ class UGATIT(object) :
                             real_B, _ = trainB_iter.next()
                         real_A, real_B = real_A.to(self.device), real_B.to(self.device)
 
-                        real_A_id = self.arcface.forward(real_A)
-                        real_B_id = self.arcface.forward(real_B)
+                        if self.use_id:
+                            real_A_id = self.arcface.forward(real_A)
+                            real_B_id = self.arcface.forward(real_B)
+                        else:
+                            real_A_id = None
+                            real_B_id = None
                         fake_A2B, _, fake_A2B_heatmap = self.genA2B(real_A, real_A_id)
                         fake_B2A, _, fake_B2A_heatmap = self.genB2A(real_B, real_B_id)
 
-                        fake_A2B_id = self.arcface.forward(fake_A2B)
-                        fake_B2A_id = self.arcface.forward(fake_B2A)
+                        if self.use_id:
+                            fake_A2B_id = self.arcface.forward(fake_A2B)
+                            fake_B2A_id = self.arcface.forward(fake_B2A)
+                        else:
+                            fake_A2B_id = None
+                            fake_B2A_id = None
                         fake_A2B2A, _, fake_A2B2A_heatmap = self.genB2A(fake_A2B, fake_A2B_id)
                         fake_B2A2B, _, fake_B2A2B_heatmap = self.genA2B(fake_B2A, fake_B2A_id)
 
@@ -391,13 +419,21 @@ class UGATIT(object) :
                             real_B, _ = testB_iter.next()
                         real_A, real_B = real_A.to(self.device), real_B.to(self.device)
 
-                        real_A_id = self.arcface.forward(real_A)
-                        real_B_id = self.arcface.forward(real_B)
+                        if self.use_id:
+                            real_A_id = self.arcface.forward(real_A)
+                            real_B_id = self.arcface.forward(real_B)
+                        else:
+                            real_A_id = None
+                            real_B_id = None
                         fake_A2B, _, fake_A2B_heatmap = self.genA2B(real_A, real_A_id)
                         fake_B2A, _, fake_B2A_heatmap = self.genB2A(real_B, real_B_id)
 
-                        fake_A2B_id = self.arcface.forward(fake_A2B)
-                        fake_B2A_id = self.arcface.forward(fake_B2A)
+                        if self.use_id:
+                            fake_A2B_id = self.arcface.forward(fake_A2B)
+                            fake_B2A_id = self.arcface.forward(fake_B2A)
+                        else:
+                            fake_A2B_id = None
+                            fake_B2A_id = None
                         fake_A2B2A, _, fake_A2B2A_heatmap = self.genB2A(fake_A2B, fake_A2B_id)
                         fake_B2A2B, _, fake_B2A2B_heatmap = self.genA2B(fake_B2A, fake_B2A_id)
 
@@ -480,9 +516,16 @@ class UGATIT(object) :
         for n, (real_A, _) in enumerate(self.testA_loader):
             real_A = real_A.to(self.device)
 
-            real_A_id = self.arcface(real_A)
+            if self.use_id:
+                real_A_id = self.arcface(real_A)
+            else:
+                real_A_id = None
             fake_A2B, _, fake_A2B_heatmap = self.genA2B(real_A, real_A_id)
-            fake_A2B_id = self.arcface(fake_A2B)
+
+            if self.use_id:
+                fake_A2B_id = self.arcface(fake_A2B)
+            else:
+                fake_A2B_id = None
             fake_A2B2A, _, fake_A2B2A_heatmap = self.genB2A(fake_A2B, fake_A2B_id)
 
             fake_A2A, _, fake_A2A_heatmap = self.genB2A(real_A, real_A_id)
@@ -503,10 +546,17 @@ class UGATIT(object) :
         for n, (real_B, _) in enumerate(self.testB_loader):
             real_B = real_B.to(self.device)
 
-            real_B_id = self.arcface(real_B)
+            if self.use_id:
+                real_B_id = self.arcface(real_B)
+            else:
+                real_B_id = None
             fake_B2A, _, fake_B2A_heatmap = self.genB2A(real_B, real_B_id)
 
-            fake_B2A_id = self.arcface(fake_B2A)
+            if self.use_id:
+                fake_B2A_id = self.arcface(fake_B2A)
+            else:
+                fake_B2A_id = None
+
             fake_B2A2B, _, fake_B2A2B_heatmap = self.genA2B(fake_B2A, fake_B2A_id)
 
             fake_B2B, _, fake_B2B_heatmap = self.genA2B(real_B, real_B_id)

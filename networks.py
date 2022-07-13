@@ -44,7 +44,7 @@ class ApplyStyle(nn.Module):
 
 
 class ResnetGenerator(nn.Module):
-    def __init__(self, input_nc, output_nc, ngf=64, n_blocks=6, img_size=256, light=False):
+    def __init__(self, input_nc, output_nc, ngf=64, n_blocks=6, img_size=256, light=False, use_id=True):
         assert(n_blocks >= 0)
         super(ResnetGenerator, self).__init__()
         self.input_nc = input_nc
@@ -53,6 +53,7 @@ class ResnetGenerator(nn.Module):
         self.n_blocks = n_blocks
         self.img_size = img_size
         self.light = light
+        self.use_id = use_id
 
         DownBlock = []
         DownBlock += [nn.ReflectionPad2d(3),
@@ -82,7 +83,8 @@ class ResnetGenerator(nn.Module):
 
         # id latent code
         # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-        self.style = ApplyStyle()
+        if self.use_id:
+            self.style = ApplyStyle()
         # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
         # Gamma, Beta block
@@ -149,7 +151,8 @@ class ResnetGenerator(nn.Module):
 
         # 这里可以加入一个人脸识别的latent code融合模块, 具体编码可以参考simswap
         # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-        x = self.style(x, id_latent)
+        if self.use_id:
+            x = self.style(x, id_latent)
         # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
         heatmap = torch.sum(x, dim=1, keepdim=True)
