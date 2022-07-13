@@ -45,30 +45,3 @@ The results of the paper came from the **Tensorflow code**
 ```
 > python main.py --dataset selfie2anime --phase test
 ```
-
-## Architecture
-<div align="center">
-  <img src = './assets/generator.png' width = '785px' height = '500px'>
-</div>
-
----
-
-<div align="center">
-  <img src = './assets/discriminator.png' width = '785px' height = '450px'>
-</div>
-
-## Results
-### Ablation study
-<div align="center">
-  <img src = './assets/ablation.png' width = '438px' height = '346px'>
-</div>
-
-### User study
-<div align="center">
-  <img src = './assets/user_study.png' width = '738px' height = '187px'>
-</div>
-
-### Comparison
-<div align="center">
-  <img src = './assets/kid.png' width = '787px' height = '344px'>
-</div>
