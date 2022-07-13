@@ -45,8 +45,6 @@ def parse_args():
     parser.add_argument("--path_regularize", type=float, default=2, help="weight of the path length regularization")
     parser.add_argument("--g_reg_every", type=int, default=1, help="interval of the applying path length regularization")
     parser.add_argument("--path_batch_shrink", type=int, default=2, help="batch size reducing factor for the path length regularization (reduce memory consumption)")
-    parser.add_argument("--g_reg_every", type=int, default=1,
-                        help="interval of the applying path length regularization")
     parser.add_argument('--use_id', type=str2bool, default=True, help='use id latent code or not')
     return check_args(parser.parse_args())
 
